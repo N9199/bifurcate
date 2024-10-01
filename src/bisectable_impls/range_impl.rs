@@ -9,6 +9,7 @@ where
     type Index = T;
     type Value = T;
 
+    #[inline]
     fn bisect_left_by<F>(&self, mut f: F) -> Option<Self::Index>
     where
         F: FnMut(&Self::Value) -> Ordering,
@@ -24,6 +25,8 @@ where
         }
         Some(left)
     }
+
+    #[inline]
     fn bisect_right_by<F>(&self, mut f: F) -> Option<Self::Index>
     where
         F: FnMut(&Self::Value) -> Ordering,
@@ -39,7 +42,9 @@ where
         }
         Some(left)
     }
-    fn equal_range_by<F>(&self, mut f: F) -> Option<(Self::Index, Self::Index)>
+
+    #[inline]
+    fn equal_range_by<F>(&self, mut f: F) -> Option<Range<Self::Index>>
     where
         F: FnMut(&Self::Value) -> Ordering,
     {
@@ -53,12 +58,11 @@ where
                 Ordering::Equal => {
                     let left = (left..(mid.clone())).bisect_left_by(&mut f)?;
                     let right = (T::forward_checked(mid, 1)?..right).bisect_right_by(&mut f)?;
-                    return Some((left, right));
+                    return Some(left..right);
                 }
             }
         }
-        // Note left == right or
-        Some((left, right))
+        Some(left..right)
     }
 }
 
@@ -95,7 +99,7 @@ mod tests {
         let found = r
             .equal_range_by(|v| v.cmp(&value_to_search_smallest_value_bigger_than_this))
             .unwrap();
-        assert_eq!(found, (start, end));
+        assert_eq!(found, start..end);
     }
 
     #[test]
@@ -109,7 +113,7 @@ mod tests {
         let found = r
             .equal_range_by(|v| (v / 2).cmp(&value_to_search_smallest_value_bigger_than_this))
             .unwrap();
-        assert_eq!(found, (start, end));
+        assert_eq!(found, start..end);
     }
 
     #[test]
@@ -123,6 +127,6 @@ mod tests {
         let found = r
             .equal_range_by(|v| (v * 2).cmp(&value_to_search_smallest_value_bigger_than_this))
             .unwrap();
-        assert_eq!(found, (start, end));
+        assert_eq!(found, start..end);
     }
 }

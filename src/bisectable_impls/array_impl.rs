@@ -2,7 +2,7 @@ use core::{cmp::Ordering, ops::Range};
 
 use crate::traits::Bisectable;
 
-impl<'a, T> Bisectable for &'a [T] {
+impl<const N: usize, T> Bisectable for [T; N] {
     type Index = usize;
     type Value = T;
 

@@ -1,4 +1,4 @@
-#[cfg(feature = "nightly")]
+#[cfg(feature = "nightly_ascii")]
 use core::ascii::Char as AsciiChar;
 use core::convert::TryFrom;
 use core::net::{Ipv4Addr, Ipv6Addr};
@@ -477,7 +477,7 @@ impl Step for char {
     }
 }
 
-#[cfg(feature = "nightly")]
+#[cfg(feature = "nightly_ascii")]
 impl Step for AsciiChar {
     #[inline]
     fn steps_between(&start: &AsciiChar, &end: &AsciiChar) -> Option<usize> {

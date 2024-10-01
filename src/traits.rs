@@ -1,9 +1,6 @@
-#[cfg(not(feature = "nightly_step"))]
-pub use crate::nightly_polyfill::Step;
-#[cfg(feature = "nightly_step")]
-pub use core::iter::Step;
+pub use crate::Step;
 
-use core::cmp::Ordering;
+use core::{cmp::Ordering, ops::Range};
 
 /// Types that have a notion of *mid point* between two objects.
 ///
@@ -146,9 +143,9 @@ pub trait Bisectable {
 
     // // Note that for types for which this crate implements MidPoint always return Some
     /// Bisects the type with a given element `x` and a key extraction function `f`.
-    /// If the type isn't sorted with respect of the order of [`Value`], the return result is unspecified and meaningless.
-    ///
-    /// [`Value`]: Bisectable::Value
+    /// 
+    /// If the type isn't sorted via the key extraction function with respect of the order of `B`,
+    /// the return result is unspecified and meaningless.
     ///
     /// If there the return value is [`Option::None`], then it means that either there's a pair of indices `i` and `j`,
     /// such that `mid_point(i, j) == None` or that there's an index `i` such that `forward_check(i, 1) == None`.
@@ -237,6 +234,7 @@ pub trait Bisectable {
 
     // // Note that for types for which this crate implements MidPoint always return Some
     /// Bisects the type with a given element `x`.
+    /// 
     /// If the type isn't sorted with respect of the order of [`Value`], the return result is unspecified and meaningless.
     ///
     /// [`Value`]: Bisectable::Value
@@ -284,9 +282,9 @@ pub trait Bisectable {
 
     // // Note that for types for which this crate implements MidPoint always return Some
     /// Bisects the type with a given element `x` and a key extraction function `f`.
-    /// If the type isn't sorted with respect of the order of [`Value`], the return result is unspecified and meaningless.
-    ///
-    /// [`Value`]: Bisectable::Value
+    /// 
+    /// If the type isn't sorted via the key extraction function with respect of the order of `B`,
+    /// the return result is unspecified and meaningless.
     ///
     /// If there the return value is [`Option::None`], then it means that either there's a pair of indices `i` and `j`,
     /// such that `mid_point(i, j) == None` or that there's an index `i` such that `forward_check(i, 1) == None`.
@@ -331,20 +329,152 @@ pub trait Bisectable {
         self.bisect_right_by(|v| f(v).cmp(b))
     }
 
-    fn equal_range_by<F>(&self, f: F) -> Option<(Self::Index, Self::Index)>
+    // // Note that for types for which this crate implements MidPoint always return Some
+    /// Finds a range from the type with a comparator function `f` via bisection, where `f` return [`Ordering::Equal`].
+    ///
+    /// If the comparator function does not implement and order with the underlying order of the object,
+    /// the return result is unspecified and meaningless. 
+    ///
+    /// If there the return value is [`Option::None`], then it means that either there's a pair of indices `i` and `j`,
+    /// such that `mid_point(i, j) == None` or that there's an index `i` such that `forward_check(i, 1) == None`.
+    /// See the documentation of [`Step`] and [`MidPoint`] for more information.
+    ///
+    /// If the return value is [`Option::Some`]`(i..j)`, then it means that `i` and `j` are such that if `i <= k < j`,
+    /// then the `k`-th value `a` satisfies that `f(a)` is [`Ordering::Equal`], 
+    /// and that for every `k >= j` then the `k`-th value `a` satisfies that `f(a)` is [`Ordering::Greater`]. 
+    /// Moreover, both `i` and `j` are the least indices that satisfy that.
+    ///
+    /// See also [`bisect_right_by`], [`bisect_left_by`], [`equal_range`] and [`equal_range_by_key`].
+    ///
+    /// [`bisect_right_by`]: Bisectable::bisect_right_by
+    /// [`bisect_left_by`]: Bisectable::bisect_left_by
+    /// [`equal_range`]: Bisectable::equal_range
+    /// [`equal_range_by_key`]: Bisectable::equal_range_by_key
+    ///
+    /// # Examples
+    ///
+    /// Compares a series of three elements. The first is in the array and is unique,
+    /// and as such the range returned starts at the index of the element in the array and ends just after it.
+    /// The second is in the array but there's multiple of them, and as such the range
+    /// returned stars at the index of the first appearance of the element and ends 
+    /// just after the index of the last of the appearances. The third isn't in the array,
+    /// and as such that the range starts and ends where the element would be inserted to 
+    /// maintain order is returned.
+    ///
+    /// ```
+    /// # use bifurcate::Bisectable;
+    /// let s = [0, 1, 2, 3, 3, 3, 4, 6, 7];
+    /// // Deref coercion doesn't work for arrays into slices?
+    /// let s = s.as_ref();
+    /// let value = 1;
+    /// assert_eq!(s.equal_range_by(|probe| probe.cmp(&value)), Some(1..2));
+    /// let value = 3;
+    /// assert_eq!(s.equal_range_by(|probe| probe.cmp(&value)), Some(3..6));
+    /// let value = 5;
+    /// assert_eq!(s.equal_range_by(|probe| probe.cmp(&value)), Some(7..7));
+    /// ```
+    fn equal_range_by<F>(&self, f: F) -> Option<Range<Self::Index>>
     where
         F: FnMut(&Self::Value) -> Ordering;
 
+    
+    // // Note that for types for which this crate implements MidPoint always return Some
+    /// Finds a range from the type where all elements in the range equal `x` via bisection.
+    ///
+    /// If the type isn't sorted with respect of the order of [`Value`], the return result is unspecified and meaningless.
+    ///  
+    /// [`Value`]: Bisectable::Value
+    /// 
+    /// If there the return value is [`Option::None`], then it means that either there's a pair of indices `i` and `j`,
+    /// such that `mid_point(i, j) == None` or that there's an index `i` such that `forward_check(i, 1) == None`.
+    /// See the documentation of [`Step`] and [`MidPoint`] for more information.
+    ///
+    /// If the return value is [`Option::Some`]`(i..j)`, then it means that `i` and `j` are such that if `i <= k < j`,
+    /// then the `k`-th value `a` satisfies that `a == x`, and that for every `k >= j` then the `k`-th value `a`
+    /// satisfies that `a > x`. Moreover, both `i` and `j` are the least indices that satisfy that.
+    ///
+    /// See also [`bisect_right`], [`bisect_left`], [`equal_range_by`] and [`equal_range_by_key`].
+    ///
+    /// [`bisect_right`]: Bisectable::bisect_right
+    /// [`bisect_left`]: Bisectable::bisect_left
+    /// [`equal_range_by`]: Bisectable::equal_range_by
+    /// [`equal_range_by_key`]: Bisectable::equal_range_by_key
+    ///
+    /// # Examples
+    ///
+    /// Compares a series of three elements. The first is in the array and is unique,
+    /// and as such the range returned starts at the index of the element in the array and ends just after it.
+    /// The second is in the array but there's multiple of them, and as such the range
+    /// returned stars at the index of the first appearance of the element and ends 
+    /// just after the index of the last of the appearances. The third isn't in the array,
+    /// and as such that the range starts and ends where the element would be inserted to 
+    /// maintain order is returned.
+    ///
+    /// ```
+    /// # use bifurcate::Bisectable;
+    /// let s = [0, 1, 2, 3, 3, 3, 4, 6, 7];
+    /// // Deref coercion doesn't work for arrays into slices?
+    /// let s = s.as_ref();
+    /// let value = 1;
+    /// assert_eq!(s.equal_range(&value), Some(1..2));
+    /// let value = 3;
+    /// assert_eq!(s.equal_range(&value), Some(3..6));
+    /// let value = 5;
+    /// assert_eq!(s.equal_range(&value), Some(7..7));
+    /// ```
     #[inline]
-    fn equal_range(&self, x: &Self::Value) -> Option<(Self::Index, Self::Index)>
+    fn equal_range(&self, x: &Self::Value) -> Option<Range<Self::Index>>
     where
         Self::Value: Ord,
     {
         self.equal_range_by(|v| v.cmp(x))
     }
 
+    // // Note that for types for which this crate implements MidPoint always return Some
+    /// Finds a range from the type where all elements in the range equal `x`.
+    ///
+    /// If the type isn't sorted via the key extraction function with respect of the order of `B`,
+    /// the return result is unspecified and meaningless.
+    ///
+    /// If there the return value is [`Option::None`], then it means that either there's a pair of indices `i` and `j`,
+    /// such that `mid_point(i, j) == None` or that there's an index `i` such that `forward_check(i, 1) == None`.
+    /// See the documentation of [`Step`] and [`MidPoint`] for more information.
+    ///
+    /// If the return value is [`Option::Some`]`(i..j)`, then it means that `i` and `j` are such that if `i <= k < j`,
+    /// then the `k`-th value `a` satisfies that `f(a) == x`, and that for every `k >= j` then the `k`-th value `a`
+    /// satisfies that `f(a) > x`. Moreover, both `i` and `j` are the least indices that satisfy that.
+    ///
+    /// See also [`bisect_right_by_key`], [`bisect_left_by_key`], [`equal_range_by`] and [`equal_range`].
+    ///
+    /// [`bisect_right_by_key`]: Bisectable::bisect_right_by_key
+    /// [`bisect_left_by_key`]: Bisectable::bisect_left_by_key
+    /// [`equal_range_by`]: Bisectable::equal_range_by
+    /// [`equal_range`]: Bisectable::equal_range
+    ///
+    /// # Examples
+    ///
+    /// Compares a series of three elements. The first is in the array and is unique,
+    /// and as such the range returned starts at the index of the element in the array and ends just after it.
+    /// The second is in the array but there's multiple of them, and as such the range
+    /// returned stars at the index of the first appearance of the element and ends 
+    /// just after the index of the last of the appearances. The third isn't in the array,
+    /// and as such that the range starts and ends where the element would be inserted to 
+    /// maintain order is returned.
+    ///
+    /// ```
+    /// # use bifurcate::Bisectable;
+    /// let s = [(4, 0), (3, 1), (1, 2), (3, 3), (15, 3), (6, 3), (4, 4), (9, 6), (3, 7)];
+    /// // Deref coercion doesn't work for arrays into slices?
+    /// let s = s.as_ref();
+    /// let value = 1;
+    /// assert_eq!(s.equal_range_by_key(&value, |&(a, b)| b), Some(1..2));
+    /// let value = 3;
+    /// assert_eq!(s.equal_range_by_key(&value, |&(a, b)| b), Some(3..6));
+    /// let value = 5;
+    /// assert_eq!(s.equal_range_by_key(&value, |&(a, b)| b), Some(7..7));
+    /// ```
     #[inline]
-    fn equal_range_by_key<B, F>(&self, b: &B, mut f: F) -> Option<(Self::Index, Self::Index)>
+    fn equal_range_by_key<B, F>(&self, b: &B, mut f: F) -> Option<Range<Self::Index>>
     where
         F: FnMut(&Self::Value) -> B,
         B: Ord,
