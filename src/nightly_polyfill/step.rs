@@ -3,13 +3,6 @@ use core::ascii::Char as AsciiChar;
 use core::convert::TryFrom;
 use core::net::{Ipv4Addr, Ipv6Addr};
 
-// // Safety: All invariants are upheld.
-// macro_rules! unsafe_impl_trusted_step {
-//     ($($type:ty)*) => {$(
-//         unsafe impl TrustedStep for $type {}
-//     )*};
-// }
-// unsafe_impl_trusted_step![AsciiChar char i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize Ipv4Addr Ipv6Addr];
 
 /// Objects that have a notion of *successor* and *predecessor* operations.
 ///
@@ -186,12 +179,14 @@ macro_rules! step_identical_methods {
     () => {
         #[inline]
         unsafe fn forward_unchecked(start: Self, n: usize) -> Self {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             // SAFETY: the caller has to guarantee that `start + n` doesn't overflow.
             unsafe { start.unchecked_add(n as Self) }
         }
 
         #[inline]
         unsafe fn backward_unchecked(start: Self, n: usize) -> Self {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             // SAFETY: the caller has to guarantee that `start - n` doesn't overflow.
             unsafe { start.unchecked_sub(n as Self) }
         }
@@ -206,6 +201,7 @@ macro_rules! step_identical_methods {
                 let _ = Self::MAX + 1;
             }
             // Do wrapping math to allow e.g. `Step::forward(-128i8, 255)`.
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             start.wrapping_add(n as Self)
         }
 
@@ -219,6 +215,7 @@ macro_rules! step_identical_methods {
                 let _ = Self::MIN - 1;
             }
             // Do wrapping math to allow e.g. `Step::backward(127i8, 255)`.
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             start.wrapping_sub(n as Self)
         }
     };
@@ -239,6 +236,7 @@ macro_rules! step_integer_impls {
                 fn steps_between(start: &Self, end: &Self) -> Option<usize> {
                     if *start <= *end {
                         // This relies on $u_narrower <= usize
+                        #[allow(clippy::cast_possible_truncation)]
                         Some((*end - *start) as usize)
                     } else {
                         None
@@ -274,6 +272,7 @@ macro_rules! step_integer_impls {
                         // Casting to isize extends the width but preserves the sign.
                         // Use wrapping_sub in isize space and cast to usize to compute
                         // the difference that might not fit inside the range of isize.
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                         Some((*end as isize).wrapping_sub(*start as isize) as usize)
                     } else {
                         None
@@ -287,6 +286,7 @@ macro_rules! step_integer_impls {
                             // Wrapping handles cases like
                             // `Step::forward(-120_i8, 200) == Some(80_i8)`,
                             // even though 200 is out of range for i8.
+                            #[allow(clippy::cast_possible_wrap)]
                             let wrapped = start.wrapping_add(n as Self);
                             if wrapped >= start {
                                 Some(wrapped)
@@ -308,6 +308,7 @@ macro_rules! step_integer_impls {
                             // Wrapping handles cases like
                             // `Step::forward(-120_i8, 200) == Some(80_i8)`,
                             // even though 200 is out of range for i8.
+                            #[allow(clippy::cast_possible_wrap)]
                             let wrapped = start.wrapping_sub(n as Self);
                             if wrapped <= start {
                                 Some(wrapped)

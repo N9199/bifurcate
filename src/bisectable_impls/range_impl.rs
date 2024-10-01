@@ -39,9 +39,9 @@ where
         }
         Some(left)
     }
-    fn equal_range_by<F>(&self, f: F) -> Option<(Self::Index, Self::Index)>
+    fn equal_range_by<F>(&self, mut f: F) -> Option<(Self::Index, Self::Index)>
     where
-        F: Fn(&Self::Value) -> Ordering,
+        F: FnMut(&Self::Value) -> Ordering,
     {
         let mut left = self.start.clone();
         let mut right = self.end.clone();
@@ -51,8 +51,8 @@ where
                 Ordering::Less => left = T::forward_checked(mid, 1)?,
                 Ordering::Greater => right = mid,
                 Ordering::Equal => {
-                    let left = (left..(mid.clone())).bisect_left_by(&f)?;
-                    let right = (T::forward_checked(mid, 1)?..right).bisect_right_by(&f)?;
+                    let left = (left..(mid.clone())).bisect_left_by(&mut f)?;
+                    let right = (T::forward_checked(mid, 1)?..right).bisect_right_by(&mut f)?;
                     return Some((left, right));
                 }
             }

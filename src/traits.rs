@@ -9,7 +9,7 @@ use core::cmp::Ordering;
 ///
 /// The *mid point* between two objects compares greater with the first object and lesser with the second object.
 pub trait MidPoint: Step {
-    /// Returns the value that would correspond to the midpoint between `start` and `end`, with preference to the "smallest" if there could be a tie, e.g. mid_point(0, 1) return Some(0)
+    /// Returns the value that would correspond to the midpoint between `start` and `end`, with preference to the "smallest" if there could be a tie, e.g. `mid_point(0, 1)` return `Some(0)`
     ///
     /// Returns `None` if the number of steps between star and end is infinite or if there's no midpoint
     ///
@@ -35,6 +35,7 @@ macro_rules! mid_point_integer_impls {
             {
                 let diff = end.checked_sub(*start)?;
                 let half_step = diff/2; //Check this
+                // SAFETY: start <= start + half_step <= end which guarantees that this give a valid output
                 Some(unsafe{start.unchecked_add(half_step)})
             }
         })+
@@ -332,7 +333,7 @@ pub trait Bisectable {
 
     fn equal_range_by<F>(&self, f: F) -> Option<(Self::Index, Self::Index)>
     where
-        F: Fn(&Self::Value) -> Ordering;
+        F: FnMut(&Self::Value) -> Ordering;
 
     #[inline]
     fn equal_range(&self, x: &Self::Value) -> Option<(Self::Index, Self::Index)>
@@ -343,9 +344,9 @@ pub trait Bisectable {
     }
 
     #[inline]
-    fn equal_range_by_key<B, F>(&self, b: &B, f: F) -> Option<(Self::Index, Self::Index)>
+    fn equal_range_by_key<B, F>(&self, b: &B, mut f: F) -> Option<(Self::Index, Self::Index)>
     where
-        F: Fn(&Self::Value) -> B,
+        F: FnMut(&Self::Value) -> B,
         B: Ord,
     {
         self.equal_range_by(|v| f(v).cmp(b))

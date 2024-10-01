@@ -24,9 +24,9 @@ impl<'a, T> Bisectable for &'a [T] {
         range.bisect_right_by(move |index: &usize| f(unsafe { self.get_unchecked(*index) }))
     }
 
-    fn equal_range_by<F>(&self, f: F) -> Option<(Self::Index, Self::Index)>
+    fn equal_range_by<F>(&self, mut f: F) -> Option<(Self::Index, Self::Index)>
     where
-        F: Fn(&Self::Value) -> Ordering,
+        F: FnMut(&Self::Value) -> Ordering,
     {
         let range = 0..self.len();
         // SAFETY: index is always contained in the range defined above, so it's always safe to get it's item
