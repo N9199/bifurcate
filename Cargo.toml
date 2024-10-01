@@ -6,6 +6,8 @@ rust-version = "1.80"
 repository = "https://github.com/N9199/bifurcate"
 readme = "README.md"
 license = "MIT"
+description = "A general, extensible and performant implementation of bisect"
+authors = ["N9199"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
